@@ -343,6 +343,10 @@ because there isn't any way to make the website data store non-persistent for th
       platforms: [AndroidPlatform(), IOSPlatform(), MacOSPlatform()])
   bool? cacheEnabled;
 
+  ///Sets the name of the website data store to use. If not set, the default value is "default".
+  @SupportedPlatforms(platforms: [IOSPlatform(), MacOSPlatform()])
+  String? websiteDataStoreIdentifier;
+
   ///Set to `true` to make the background of the WebView transparent. If your app has a dark theme, this can prevent a white flash on initialization. The default value is `false`.
   @SupportedPlatforms(platforms: [
     AndroidPlatform(),
@@ -2013,8 +2017,7 @@ as it can cause framerate drops on animations in Android 9 and lower (see [Hybri
   ///If the [PlatformWebViewCreationParams.onShowFileChooser] event is implemented and this value is `null`,
   ///it will be automatically inferred as `true`, otherwise, the default value is `false`.
   ///This logic will not be applied for [PlatformInAppBrowser], where you must set the value manually.
-  @SupportedPlatforms(
-      platforms: [AndroidPlatform()])
+  @SupportedPlatforms(platforms: [AndroidPlatform()])
   bool? useOnShowFileChooser;
 
   ///Specifies a feature policy for the `<iframe>`.
@@ -2124,6 +2127,7 @@ as it can cause framerate drops on animations in Android 9 and lower (see [Hybri
     this.useShouldInterceptFetchRequest,
     this.incognito = false,
     this.cacheEnabled = true,
+    this.websiteDataStoreIdentifier,
     this.transparentBackground = false,
     this.disableVerticalScroll = false,
     this.disableHorizontalScroll = false,
@@ -2454,6 +2458,12 @@ class InAppWebViewOptions
   ///**NOTE**: available on iOS 9.0+.
   bool cacheEnabled;
 
+  ///Identifier for custom WKWebsiteDataStore. If provided, WKWebsiteDataStore(forIdentifier:) will be used instead of WKWebsiteDataStore.default().
+  ///This allows for persistent data storage that is isolated from the default store.
+  ///
+  ///**NOTE**: available on iOS 17.0+ and macOS 14.0+.
+  String? websiteDataStoreIdentifier;
+
   ///Set to `true` to make the background of the WebView transparent. If your app has a dark theme, this can prevent a white flash on initialization. The default value is `false`.
   bool transparentBackground;
 
@@ -2511,6 +2521,7 @@ class InAppWebViewOptions
       this.useShouldInterceptFetchRequest = false,
       this.incognito = false,
       this.cacheEnabled = true,
+      this.websiteDataStoreIdentifier,
       this.transparentBackground = false,
       this.disableVerticalScroll = false,
       this.disableHorizontalScroll = false,
@@ -2557,7 +2568,8 @@ class InAppWebViewOptions
       "disableContextMenu": disableContextMenu,
       "supportZoom": supportZoom,
       "allowFileAccessFromFileURLs": allowFileAccessFromFileURLs,
-      "allowUniversalAccessFromFileURLs": allowUniversalAccessFromFileURLs
+      "allowUniversalAccessFromFileURLs": allowUniversalAccessFromFileURLs,
+      "websiteDataStoreIdentifier": websiteDataStoreIdentifier
     };
   }
 
@@ -2605,6 +2617,7 @@ class InAppWebViewOptions
     instance.allowFileAccessFromFileURLs = map["allowFileAccessFromFileURLs"];
     instance.allowUniversalAccessFromFileURLs =
         map["allowUniversalAccessFromFileURLs"];
+    instance.websiteDataStoreIdentifier = map["websiteDataStoreIdentifier"];
     return instance;
   }
 

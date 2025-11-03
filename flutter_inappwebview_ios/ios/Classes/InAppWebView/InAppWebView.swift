@@ -119,6 +119,24 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate,
         }
     }
     
+    // MARK: - WKWebsiteDataStore Helper
+    private func getWebsiteDataStore() -> WKWebsiteDataStore {
+        if let identifier = settings?.websiteDataStoreIdentifier {
+            if #available(iOS 17.0, *) {
+                return WKWebsiteDataStore(forIdentifier: UUID(uuidString: identifier) ?? UUID())
+            } else {
+                // Fallback for older iOS versions
+                return settings?.incognito == true ? WKWebsiteDataStore.nonPersistent() : WKWebsiteDataStore.default()
+            }
+        } else if settings?.incognito == true {
+            return WKWebsiteDataStore.nonPersistent()
+        } else if settings?.cacheEnabled == true {
+            return WKWebsiteDataStore.default()
+        } else {
+            return WKWebsiteDataStore.nonPersistent()
+        }
+    }
+    
     // Fix https://github.com/pichillilorenzo/flutter_inappwebview/issues/1947
     private var _scrollViewContentInsetAdjusted = false
     @objc func keyboardWillShow(notification: NSNotification) {
@@ -668,11 +686,7 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate,
             }
             
             if #available(iOS 9.0, *) {
-                if settings.incognito {
-                    configuration.websiteDataStore = WKWebsiteDataStore.nonPersistent()
-                } else if settings.cacheEnabled {
-                    configuration.websiteDataStore = WKWebsiteDataStore.default()
-                }
+                configuration.websiteDataStore = getWebsiteDataStore()
                 if !settings.applicationNameForUserAgent.isEmpty {
                     if let applicationNameForUserAgent = configuration.applicationNameForUserAgent {
                         configuration.applicationNameForUserAgent = applicationNameForUserAgent + " " + settings.applicationNameForUserAgent
@@ -706,11 +720,12 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate,
                     // Set Cookies in iOS 11 and above, initialize websiteDataStore before setting cookies
                     // See also https://forums.developer.apple.com/thread/97194
                     // check if websiteDataStore has not been initialized before
-                    if(!settings.incognito && !settings.cacheEnabled) {
+                    if(!settings.incognito && !settings.cacheEnabled && settings.websiteDataStoreIdentifier == nil) {
                         configuration.websiteDataStore = WKWebsiteDataStore.nonPersistent()
                     }
+                    let dataStore = configuration.websiteDataStore ?? getWebsiteDataStore()
                     for cookie in HTTPCookieStorage.shared.cookies ?? [] {
-                        configuration.websiteDataStore.httpCookieStore.setCookie(cookie, completionHandler: nil)
+                        dataStore.httpCookieStore.setCookie(cookie, completionHandler: nil)
                     }
                 }
             }
@@ -1068,20 +1083,21 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate,
         }
         
         if #available(iOS 9.0, *) {
-            if (newSettingsMap["incognito"] != nil && settings?.incognito != newSettings.incognito && newSettings.incognito) {
-                configuration.websiteDataStore = WKWebsiteDataStore.nonPersistent()
-            } else if (newSettingsMap["cacheEnabled"] != nil && settings?.cacheEnabled != newSettings.cacheEnabled && newSettings.cacheEnabled) {
-                configuration.websiteDataStore = WKWebsiteDataStore.default()
+            if (newSettingsMap["incognito"] != nil && settings?.incognito != newSettings.incognito) ||
+               (newSettingsMap["cacheEnabled"] != nil && settings?.cacheEnabled != newSettings.cacheEnabled) ||
+               (newSettingsMap["websiteDataStoreIdentifier"] != nil && settings?.websiteDataStoreIdentifier != newSettings.websiteDataStoreIdentifier) {
+                configuration.websiteDataStore = getWebsiteDataStore()
             }
         }
         
         if #available(iOS 11.0, *) {
             if (newSettingsMap["sharedCookiesEnabled"] != nil && settings?.sharedCookiesEnabled != newSettings.sharedCookiesEnabled && newSettings.sharedCookiesEnabled) {
-                if(!newSettings.incognito && !newSettings.cacheEnabled) {
+                if(!newSettings.incognito && !newSettings.cacheEnabled && newSettings.websiteDataStoreIdentifier == nil) {
                     configuration.websiteDataStore = WKWebsiteDataStore.nonPersistent()
                 }
+                let dataStore = configuration.websiteDataStore ?? getWebsiteDataStore()
                 for cookie in HTTPCookieStorage.shared.cookies ?? [] {
-                    configuration.websiteDataStore.httpCookieStore.setCookie(cookie, completionHandler: nil)
+                    dataStore.httpCookieStore.setCookie(cookie, completionHandler: nil)
                 }
             }
             if newSettingsMap["accessibilityIgnoresInvertColors"] != nil && settings?.accessibilityIgnoresInvertColors != newSettings.accessibilityIgnoresInvertColors {

@@ -155,6 +155,9 @@ class IOSInAppWebViewOptions
   ///Set to `true` to be able to listen to the [PlatformWebViewCreationParams.iosOnNavigationResponse] event. The default value is `false`.
   bool useOnNavigationResponse;
 
+  ///The identifier of the website data store.
+  String? websiteDataStoreIdentifier;
+
   ///Set to `true` to enable Apple Pay API for the `WebView` at its first page load or on the next page load (using [PlatformInAppWebViewController.setOptions]). The default value is `false`.
   ///
   ///**IMPORTANT NOTE**: As written in the official [Safari 13 Release Notes](https://developer.apple.com/documentation/safari-release-notes/safari-13-release-notes#Payment-Request-API),
@@ -250,6 +253,7 @@ class IOSInAppWebViewOptions
       this.isPagingEnabled = false,
       this.maximumZoomScale = 1.0,
       this.minimumZoomScale = 1.0,
+      this.websiteDataStoreIdentifier,
       this.contentInsetAdjustmentBehavior =
           IOSUIScrollViewContentInsetAdjustmentBehavior.NEVER,
       this.isDirectionalLockEnabled = false,
@@ -309,6 +313,7 @@ class IOSInAppWebViewOptions
       "allowingReadAccessTo": allowingReadAccessTo.toString(),
       "disableLongPressContextMenuOnLinks": disableLongPressContextMenuOnLinks,
       "disableInputAccessoryView": disableInputAccessoryView,
+      "websiteDataStoreIdentifier": websiteDataStoreIdentifier
     };
   }
 
@@ -372,6 +377,7 @@ class IOSInAppWebViewOptions
     instance.disableLongPressContextMenuOnLinks =
         map["disableLongPressContextMenuOnLinks"];
     instance.disableInputAccessoryView = map["disableInputAccessoryView"];
+    instance.websiteDataStoreIdentifier = map["websiteDataStoreIdentifier"];
     return instance;
   }
 
