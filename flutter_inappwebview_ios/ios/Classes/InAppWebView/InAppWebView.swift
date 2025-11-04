@@ -120,12 +120,11 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate,
     }
     
     // MARK: - WKWebsiteDataStore Helper
-    private func getWebsiteDataStore() -> WKWebsiteDataStore {
+    private static func getWebsiteDataStore(settings: InAppWebViewSettings?) -> WKWebsiteDataStore {
         if let identifier = settings?.websiteDataStoreIdentifier {
             if #available(iOS 17.0, *) {
                 return WKWebsiteDataStore(forIdentifier: UUID(uuidString: identifier) ?? UUID())
             } else {
-                // Fallback for older iOS versions
                 return settings?.incognito == true ? WKWebsiteDataStore.nonPersistent() : WKWebsiteDataStore.default()
             }
         } else if settings?.incognito == true {
@@ -135,6 +134,11 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate,
         } else {
             return WKWebsiteDataStore.nonPersistent()
         }
+    }
+    
+    // Instance method for backward compatibility
+    private func getWebsiteDataStore() -> WKWebsiteDataStore {
+        return InAppWebView.getWebsiteDataStore(settings: settings)
     }
     
     // Fix https://github.com/pichillilorenzo/flutter_inappwebview/issues/1947
@@ -686,7 +690,7 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate,
             }
             
             if #available(iOS 9.0, *) {
-                configuration.websiteDataStore = getWebsiteDataStore()
+                configuration.websiteDataStore = getWebsiteDataStore(settings: settings)
                 if !settings.applicationNameForUserAgent.isEmpty {
                     if let applicationNameForUserAgent = configuration.applicationNameForUserAgent {
                         configuration.applicationNameForUserAgent = applicationNameForUserAgent + " " + settings.applicationNameForUserAgent
@@ -723,9 +727,9 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate,
                     if(!settings.incognito && !settings.cacheEnabled && settings.websiteDataStoreIdentifier == nil) {
                         configuration.websiteDataStore = WKWebsiteDataStore.nonPersistent()
                     }
-                    let dataStore = configuration.websiteDataStore ?? getWebsiteDataStore()
+                    let dataStore = configuration.websiteDataStore ?? getWebsiteDataStore(settings: settings)
                     for cookie in HTTPCookieStorage.shared.cookies ?? [] {
-                        dataStore.httpCookieStore.setCookie(cookie, completionHandler: nil)
+                        dataStore.httpCookieStore.setCookie(cookie, completionHandler: { () -> Void in })
                     }
                 }
             }
@@ -1097,7 +1101,7 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate,
                 }
                 let dataStore = configuration.websiteDataStore ?? getWebsiteDataStore()
                 for cookie in HTTPCookieStorage.shared.cookies ?? [] {
-                    dataStore.httpCookieStore.setCookie(cookie, completionHandler: nil)
+                    dataStore.httpCookieStore.setCookie(cookie, completionHandler: { () -> Void in })
                 }
             }
             if newSettingsMap["accessibilityIgnoresInvertColors"] != nil && settings?.accessibilityIgnoresInvertColors != newSettings.accessibilityIgnoresInvertColors {

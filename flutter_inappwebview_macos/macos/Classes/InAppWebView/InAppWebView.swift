@@ -75,12 +75,11 @@ public class InAppWebView: WKWebView, WKUIDelegate,
     }
 
     // MARK: - WKWebsiteDataStore Helper
-    private func getWebsiteDataStore() -> WKWebsiteDataStore {
+    private static func getWebsiteDataStore(settings: InAppWebViewSettings?) -> WKWebsiteDataStore {
         if let identifier = settings?.websiteDataStoreIdentifier {
             if #available(macOS 14.0, *) {
                 return WKWebsiteDataStore(forIdentifier: UUID(uuidString: identifier) ?? UUID())
             } else {
-                // Fallback for older macOS versions
                 return settings?.incognito == true ? WKWebsiteDataStore.nonPersistent() : WKWebsiteDataStore.default()
             }
         } else if settings?.incognito == true {
@@ -90,6 +89,11 @@ public class InAppWebView: WKWebView, WKUIDelegate,
         } else {
             return WKWebsiteDataStore.nonPersistent()
         }
+    }
+    
+    // Instance method for backward compatibility
+    private func getWebsiteDataStore() -> WKWebsiteDataStore {
+        return InAppWebView.getWebsiteDataStore(settings: settings)
     }
 
     public func prepare() {
@@ -294,7 +298,7 @@ public class InAppWebView: WKWebView, WKUIDelegate,
                 configuration.preferences.setValue(settings.allowFileAccessFromFileURLs, forKey: "allowFileAccessFromFileURLs")
             }
             
-            configuration.websiteDataStore = getWebsiteDataStore()
+            configuration.websiteDataStore = getWebsiteDataStore(settings: settings)
             if !settings.applicationNameForUserAgent.isEmpty {
                 if let applicationNameForUserAgent = configuration.applicationNameForUserAgent {
                     configuration.applicationNameForUserAgent = applicationNameForUserAgent + " " + settings.applicationNameForUserAgent
@@ -318,9 +322,9 @@ public class InAppWebView: WKWebView, WKUIDelegate,
                     if(!settings.incognito && !settings.cacheEnabled && settings.websiteDataStoreIdentifier == nil) {
                         configuration.websiteDataStore = WKWebsiteDataStore.nonPersistent()
                     }
-                    let dataStore = configuration.websiteDataStore ?? getWebsiteDataStore()
+                    let dataStore = configuration.websiteDataStore ?? getWebsiteDataStore(settings: settings)
                     for cookie in HTTPCookieStorage.shared.cookies ?? [] {
-                        dataStore.httpCookieStore.setCookie(cookie, completionHandler: nil)
+                        dataStore.httpCookieStore.setCookie(cookie, completionHandler: { () -> Void in })
                     }
                 }
             }
@@ -599,7 +603,7 @@ public class InAppWebView: WKWebView, WKUIDelegate,
                 }
                 let dataStore = configuration.websiteDataStore ?? getWebsiteDataStore()
                 for cookie in HTTPCookieStorage.shared.cookies ?? [] {
-                    dataStore.httpCookieStore.setCookie(cookie, completionHandler: nil)
+                    dataStore.httpCookieStore.setCookie(cookie, completionHandler: { () -> Void in })
                 }
             }
         }
