@@ -74,6 +74,28 @@ public class InAppWebView: WKWebView, WKUIDelegate,
         super.init(coder: aDecoder)!
     }
 
+    // MARK: - WKWebsiteDataStore Helper
+    private static func getWebsiteDataStore(settings: InAppWebViewSettings?) -> WKWebsiteDataStore {
+        if let identifier = settings?.websiteDataStoreIdentifier {
+            if #available(macOS 14.0, *) {
+                return WKWebsiteDataStore(forIdentifier: UUID(uuidString: identifier) ?? UUID())
+            } else {
+                return settings?.incognito == true ? WKWebsiteDataStore.nonPersistent() : WKWebsiteDataStore.default()
+            }
+        } else if settings?.incognito == true {
+            return WKWebsiteDataStore.nonPersistent()
+        } else if settings?.cacheEnabled == true {
+            return WKWebsiteDataStore.default()
+        } else {
+            return WKWebsiteDataStore.nonPersistent()
+        }
+    }
+    
+    // Instance method for backward compatibility
+    private func getWebsiteDataStore() -> WKWebsiteDataStore {
+        return InAppWebView.getWebsiteDataStore(settings: settings)
+    }
+
     public func prepare() {
         addObserver(self,
                     forKeyPath: #keyPath(WKWebView.estimatedProgress),
@@ -276,11 +298,7 @@ public class InAppWebView: WKWebView, WKUIDelegate,
                 configuration.preferences.setValue(settings.allowFileAccessFromFileURLs, forKey: "allowFileAccessFromFileURLs")
             }
             
-            if settings.incognito {
-                configuration.websiteDataStore = WKWebsiteDataStore.nonPersistent()
-            } else if settings.cacheEnabled {
-                configuration.websiteDataStore = WKWebsiteDataStore.default()
-            }
+            configuration.websiteDataStore = getWebsiteDataStore(settings: settings)
             if !settings.applicationNameForUserAgent.isEmpty {
                 if let applicationNameForUserAgent = configuration.applicationNameForUserAgent {
                     configuration.applicationNameForUserAgent = applicationNameForUserAgent + " " + settings.applicationNameForUserAgent
@@ -301,11 +319,12 @@ public class InAppWebView: WKWebView, WKUIDelegate,
                     // Set Cookies in iOS 11 and above, initialize websiteDataStore before setting cookies
                     // See also https://forums.developer.apple.com/thread/97194
                     // check if websiteDataStore has not been initialized before
-                    if(!settings.incognito && !settings.cacheEnabled) {
+                    if(!settings.incognito && !settings.cacheEnabled && settings.websiteDataStoreIdentifier == nil) {
                         configuration.websiteDataStore = WKWebsiteDataStore.nonPersistent()
                     }
+                    let dataStore = configuration.websiteDataStore ?? getWebsiteDataStore(settings: settings)
                     for cookie in HTTPCookieStorage.shared.cookies ?? [] {
-                        configuration.websiteDataStore.httpCookieStore.setCookie(cookie, completionHandler: nil)
+                        dataStore.httpCookieStore.setCookie(cookie, completionHandler: { () -> Void in })
                     }
                 }
             }
@@ -571,19 +590,20 @@ public class InAppWebView: WKWebView, WKUIDelegate,
             alphaValue = CGFloat(viewAlpha)
         }
         
-        if (newSettingsMap["incognito"] != nil && settings?.incognito != newSettings.incognito && newSettings.incognito) {
-            configuration.websiteDataStore = WKWebsiteDataStore.nonPersistent()
-        } else if (newSettingsMap["cacheEnabled"] != nil && settings?.cacheEnabled != newSettings.cacheEnabled && newSettings.cacheEnabled) {
-            configuration.websiteDataStore = WKWebsiteDataStore.default()
+        if (newSettingsMap["incognito"] != nil && settings?.incognito != newSettings.incognito) ||
+           (newSettingsMap["cacheEnabled"] != nil && settings?.cacheEnabled != newSettings.cacheEnabled) ||
+           (newSettingsMap["websiteDataStoreIdentifier"] != nil && settings?.websiteDataStoreIdentifier != newSettings.websiteDataStoreIdentifier) {
+            configuration.websiteDataStore = getWebsiteDataStore()
         }
         
         if #available(macOS 10.13, *) {
             if (newSettingsMap["sharedCookiesEnabled"] != nil && settings?.sharedCookiesEnabled != newSettings.sharedCookiesEnabled && newSettings.sharedCookiesEnabled) {
-                if(!newSettings.incognito && !newSettings.cacheEnabled) {
+                if(!newSettings.incognito && !newSettings.cacheEnabled && newSettings.websiteDataStoreIdentifier == nil) {
                     configuration.websiteDataStore = WKWebsiteDataStore.nonPersistent()
                 }
+                let dataStore = configuration.websiteDataStore ?? getWebsiteDataStore()
                 for cookie in HTTPCookieStorage.shared.cookies ?? [] {
-                    configuration.websiteDataStore.httpCookieStore.setCookie(cookie, completionHandler: nil)
+                    dataStore.httpCookieStore.setCookie(cookie, completionHandler: { () -> Void in })
                 }
             }
         }

@@ -32,3 +32,6 @@ build/
 flutter_driver_tests.log
 tool/chromedriver
 tool/chromedriver.*
+flutter_inappwebview_android/example/pubspec.lock
+.aigenerator/
+

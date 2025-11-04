@@ -31,6 +31,7 @@ public class InAppWebViewSettings: ISettings<InAppWebView> {
     var useShouldInterceptFetchRequest = false
     var incognito = false
     var cacheEnabled = true
+    var websiteDataStoreIdentifier: String?
     var transparentBackground = false
     var supportZoom = true
     var allowUniversalAccessFromFileURLs = false
